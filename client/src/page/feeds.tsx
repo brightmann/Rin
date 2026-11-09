@@ -40,6 +40,18 @@ export function FeedsPage() {
     const feedListClass = siteConfig.feedLayout === "masonry" ? "wauto columns-1 gap-5 ani-show md:columns-2" : "wauto flex flex-col ani-show";
     const currentFeeds = feeds[listState] ?? { size: 0, data: [], hasNext: false };
     const currentFeedData = Array.isArray(currentFeeds.data) ? currentFeeds.data : [];
+    const totalPages = limit > 0 ? Math.ceil(currentFeeds.size / limit) : 1
+    const pageList = ((): (number | '…')[] => {
+        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+        const pages = new Set<number>([1, 2, totalPages - 1, totalPages, page - 1, page, page + 1])
+        const sorted = [...pages].filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b)
+        const out: (number | '…')[] = []
+        for (let i = 0; i < sorted.length; i++) {
+            if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push('…')
+            out.push(sorted[i])
+        }
+        return out
+    })()
     const ref = useRef("")
     function fetchFeeds(type: FeedType) {
         client.feed.list({
@@ -105,21 +117,32 @@ export function FeedsPage() {
                                 <FeedCard key={id} id={id} {...feed} />
                             ))}
                         </div>
-                        <div className="wauto flex flex-row items-center mt-4 ani-show">
-                            {page > 1 &&
-                                <Link href={`/?type=${listState}&page=${(page - 1)}`}
-                                    className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}>
-                                    {t('previous')}
-                                </Link>
-                            }
-                            <div className="flex-1" />
-                            {currentFeeds.hasNext &&
-                                <Link href={`/?type=${listState}&page=${(page + 1)}`}
-                                    className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}>
-                                    {t('next')}
-                                </Link>
-                            }
-                        </div>
+                        {totalPages > 1 &&
+                            <div className="wauto flex flex-row items-center justify-center gap-2 mt-4 ani-show">
+                                {page > 1 &&
+                                    <Link href={`/?type=${listState}&page=${(page - 1)}`}
+                                        className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}>
+                                        {t('previous')}
+                                    </Link>
+                                }
+                                {pageList.map((p, i) => p === '…' ? (
+                                    <span key={`ellipsis-${i}`} className="text-sm text-neutral-500 px-1">…</span>
+                                ) : (
+                                    <Link key={p} href={`/?type=${listState}&page=${p}`}
+                                        className={p === page
+                                            ? `text-sm font-normal rounded-full px-3 py-2 text-white bg-theme`
+                                            : `text-sm font-normal rounded-full px-3 py-2 text-neutral-600 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10`}>
+                                        {p}
+                                    </Link>
+                                ))}
+                                {page < totalPages &&
+                                    <Link href={`/?type=${listState}&page=${(page + 1)}`}
+                                        className={`text-sm font-normal rounded-full px-4 py-2 text-white bg-theme`}>
+                                        {t('next')}
+                                    </Link>
+                                }
+                            </div>
+                        }
                     </Waiting>
                 </main>
             </Waiting>

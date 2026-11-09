@@ -236,7 +236,10 @@ export async function runCloudflareDeploy(target: "all" | "server" | "client" = 
     process.exit(1);
   }
 
-  const listJson = (JSON.parse(await $`${bunExec} x wrangler d1 list --json`.quiet().text()) as Array<{ name: string; uuid: string }>).find(
+  const rawD1List = await $`${bunExec} x wrangler d1 list --json`.quiet().text();
+  // wrangler may print non-JSON lines (e.g. proxy notice) before the JSON array; parse from the first '['
+  const jsonStart = rawD1List.indexOf("[");
+  const listJson = (JSON.parse(jsonStart >= 0 ? rawD1List.slice(jsonStart) : rawD1List) as Array<{ name: string; uuid: string }>).find(
     (item) => item.name === dbName,
   );
   if (listJson) {

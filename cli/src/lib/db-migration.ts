@@ -29,7 +29,11 @@ async function runWranglerJson(args: string[]) {
     throw new Error(stderr.trim() || stdout.trim() || `wrangler failed with exit code ${exitCode}`);
   }
 
-  return JSON.parse(stdout);
+  // wrangler may print non-JSON lines (e.g. proxy notice) before the JSON payload; parse from the first '{' or '['
+  const objStart = stdout.indexOf("{");
+  const arrStart = stdout.indexOf("[");
+  const jsonStart = objStart >= 0 && arrStart >= 0 ? Math.min(objStart, arrStart) : Math.max(objStart, arrStart);
+  return JSON.parse(jsonStart >= 0 ? stdout.slice(jsonStart) : stdout);
 }
 
 async function runWranglerQuiet(args: string[]) {
